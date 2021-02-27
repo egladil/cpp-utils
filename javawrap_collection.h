@@ -285,6 +285,8 @@ template <typename T>
 class Iterable : public TypedObject<decltype("java/util/Iterable"_class)>,
                  public detail::IterableOperations<Iterable<T>, T> {
   public:
+    constexpr Iterable() noexcept = default;
+
     Iterable(const Iterable& object) : TypedObject(static_cast<const TypedObject&>(object)) {}
 
     Iterable(Iterable&& object) : TypedObject(std::forward<TypedObject>(object)) {}
@@ -320,6 +322,8 @@ template <typename T>
 class Collection : public TypedObject<decltype("java/util/Collection"_class)>,
                    public detail::CollectionOperations<Collection<T>, T> {
   public:
+    constexpr Collection() noexcept = default;
+
     Collection(const Collection& object) : TypedObject(static_cast<const TypedObject&>(object)) {}
 
     Collection(Collection&& object) : TypedObject(std::forward<TypedObject>(object)) {}
@@ -354,6 +358,8 @@ class Collection : public TypedObject<decltype("java/util/Collection"_class)>,
 template <typename T>
 class List : public TypedObject<decltype("java/util/List"_class)>, public detail::ListOperations<List<T>, T> {
   public:
+    constexpr List() noexcept = default;
+
     List(const List& object) : TypedObject(static_cast<const TypedObject&>(object)) {}
 
     List(List&& object) : TypedObject(std::forward<TypedObject>(object)) {}
@@ -385,8 +391,12 @@ class List : public TypedObject<decltype("java/util/List"_class)>, public detail
     }
 };
 
+template <typename T> auto makeArrayList() {
+    return List<T>(Class::forName("java/util/ArrayList").newInstance());
+}
+
 template <typename T, typename InputIt> auto makeArrayList(InputIt first, InputIt last) {
-    List<T> result = Class::forName("java/util/ArrayList").newInstance((int32_t)(last - first));
+    List<T> result(Class::forName("java/util/ArrayList").newInstance((int32_t)(last - first)));
     for (auto current = first; current != last; ++current) {
         result.add(*current);
     }
@@ -401,8 +411,12 @@ template <typename TIterable> auto makeArrayList(const TIterable& iterable) {
     return makeArrayList<typename TIterable::value_type>(iterable.begin(), iterable.end());
 }
 
+template <typename T> auto makeHashSet() {
+    return Collection<T>(Class::forName("java/util/makeHashSet").newInstance());
+}
+
 template <typename T, typename InputIt> auto makeHashSet(InputIt first, InputIt last) {
-    Collection<T> result = Class::forName("java/util/makeHashSet").newInstance((int32_t)(last - first));
+    Collection<T> result(Class::forName("java/util/makeHashSet").newInstance((int32_t)(last - first)));
     for (auto current = first; current != last; ++current) {
         result.add(*current);
     }

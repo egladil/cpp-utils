@@ -262,7 +262,7 @@ class Object {
     template <> Object invokeInternal<Object>(jmethodID method, const value_t* args) const;
 
   public:
-    Object() noexcept = default;
+    constexpr Object() noexcept = default;
     Object(const jobject& handle);
     Object(jobject&& handle);
     Object(const Object& object);
@@ -330,7 +330,7 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
     TypedObject(jobject&& handle, int32_t) : Object(std::forward<jobject>(handle)) {}
 
   public:
-    TypedObject() noexcept = default;
+    constexpr TypedObject() noexcept = default;
 
     TypedObject(const TypedObject& object) : Object(object) {}
     TypedObject(TypedObject&& object) : Object(std::forward<Object>(object)) {}
@@ -338,6 +338,10 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
     template <typename T> explicit TypedObject(const T& object) : Object(object) { typeCheck(); }
 
     void typeCheck() const {
+        if (*this == nullptr) {
+            return;
+        }
+
         Class actual = getClass();
         if (!clazz::clazz().isAssignableFrom(actual)) {
             throw CastException(actual.getName() + " cannot be cast to " + std::string(clazz::name));
