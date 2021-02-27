@@ -3,6 +3,28 @@
 #include <jni.h>
 
 namespace {
+class NullTerminatedString {
+  private:
+    const std::string_view& view;
+    std::string string;
+
+  public:
+    NullTerminatedString(const std::string_view& view) : view(view) {
+        const char* nullTerminator = view.data() + view.size();
+        if (*nullTerminator != '\0') {
+            string = std::string(view);
+        }
+    }
+
+    operator const char*() const {
+        if (string.size() == view.size()) {
+            return string.data();
+        } else {
+            return view.data();
+        }
+    }
+};
+
 std::string asString(jstring string) {
     const char* temp = jwrap::getEnv()->GetStringUTFChars(string, nullptr);
     std::string result = temp;
@@ -65,7 +87,9 @@ value_t toValue(double value) {
 
 value_t toValue(const std::string_view& value) {
     jvalue val;
-    val.l = getEnv()->NewStringUTF(value.data());
+
+    val.l = getEnv()->NewStringUTF(NullTerminatedString(value));
+
     return reinterpret_cast<value_t&>(val);
 }
 
@@ -130,12 +154,8 @@ Object::Object(double boxedValue) {
     *this = Class::forName("java/lang/Boolean").newInstance(boxedValue);
 }
 
-Object::Object(const std::string& string) {
-    handle = getEnv()->NewStringUTF(string.data());
-}
-
 Object::Object(const std::string_view& string) {
-    handle = getEnv()->NewStringUTF(string.data());
+    handle = getEnv()->NewStringUTF(NullTerminatedString(string));
 }
 
 Object::~Object() {
@@ -278,7 +298,7 @@ Class::Class(jclass&& handle) : TypedObject(std::forward<jobject>(handle), 0) {
 }
 
 Class Class::forName(const std::string_view& name) {
-    return getEnv()->FindClass(name.data());
+    return getEnv()->FindClass(NullTerminatedString(name));
 }
 
 bool Class::isAssignableFrom(const Class& subclass) const {
@@ -293,12 +313,14 @@ std::string Class::getName() const {
 
 jmethodID Class::getMethod(const std::string_view& name, const std::string_view& signature) const {
     nullCheck();
-    return getEnv()->GetMethodID(static_cast<jclass>(handle), name.data(), signature.data());
+    return getEnv()->GetMethodID(static_cast<jclass>(handle), NullTerminatedString(name),
+                                 NullTerminatedString(signature));
 }
 
 jmethodID Class::getStaticMethod(const std::string_view& name, const std::string_view& signature) const {
     nullCheck();
-    return getEnv()->GetStaticMethodID(static_cast<jclass>(handle), name.data(), signature.data());
+    return getEnv()->GetStaticMethodID(static_cast<jclass>(handle), NullTerminatedString(name),
+                                       NullTerminatedString(signature));
 }
 
 Object Class::newInstanceInternal(jmethodID method, const value_t* args) const {

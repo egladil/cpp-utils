@@ -275,8 +275,8 @@ class Object {
     explicit Object(int64_t boxedValue);
     explicit Object(float boxedValue);
     explicit Object(double boxedValue);
-    explicit Object(const std::string& string);
     explicit Object(const std::string_view& string);
+    explicit Object(const std::string& string) : Object(std::string_view(string)) {}
     ~Object();
 
     void nullCheck() const {
