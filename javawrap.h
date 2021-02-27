@@ -379,6 +379,22 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
   private:
     Object newInstanceInternal(jmethodID method, const value_t* args) const;
 
+    template <typename TReturn> TReturn invokeStaticInternal(jmethodID method, const value_t* args) const {
+        return static_cast<TReturn>(invokeStaticInternal<Object>(method, args));
+    }
+
+    template <> void invokeStaticInternal<void>(jmethodID method, const value_t* args) const;
+    template <> bool invokeStaticInternal<bool>(jmethodID method, const value_t* args) const;
+    template <> uint8_t invokeStaticInternal<uint8_t>(jmethodID method, const value_t* args) const;
+    template <> uint16_t invokeStaticInternal<uint16_t>(jmethodID method, const value_t* args) const;
+    template <> int16_t invokeStaticInternal<int16_t>(jmethodID method, const value_t* args) const;
+    template <> int32_t invokeStaticInternal<int32_t>(jmethodID method, const value_t* args) const;
+    template <> int64_t invokeStaticInternal<int64_t>(jmethodID method, const value_t* args) const;
+    template <> float invokeStaticInternal<float>(jmethodID method, const value_t* args) const;
+    template <> double invokeStaticInternal<double>(jmethodID method, const value_t* args) const;
+    template <> std::string invokeStaticInternal<std::string>(jmethodID method, const value_t* args) const;
+    template <> Object invokeStaticInternal<Object>(jmethodID method, const value_t* args) const;
+
   public:
     Class(const Class& object) : TypedObject(static_cast<TypedObject>(object)) {}
 
@@ -430,9 +446,26 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
     std::string getName() const;
 
     jmethodID getMethod(const std::string_view& name, const std::string_view& signature) const;
+    jmethodID getStaticMethod(const std::string_view& name, const std::string_view& signature) const;
 
     template <typename TReturn, typename... TArgs> jmethodID getMethod(const std::string_view& name) const {
         return getMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature.chars);
+    }
+
+    template <typename TReturn, typename... TArgs> jmethodID getStaticMethod(const std::string_view& name) const {
+        return getStaticMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature.chars);
+    }
+
+    template <typename TReturn, typename... TArgs>
+    TReturn invokeStatic(jmethodID methodId, const TArgs&... args) const {
+        detail::Arguments<TArgs...> values(args...);
+        return invokeStaticInternal<TReturn>(methodId, values.data());
+    }
+
+    template <typename TReturn, typename... TArgs>
+    TReturn invokeStatic(const std::string_view& method, const TArgs&... args) const {
+        jmethodID methodId = getStaticMethod<TReturn, TArgs...>(method);
+        return invokeStatic<TReturn, TArgs...>(methodId, args...);
     }
 };
 

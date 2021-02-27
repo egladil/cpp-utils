@@ -296,9 +296,63 @@ jmethodID Class::getMethod(const std::string_view& name, const std::string_view&
     return getEnv()->GetMethodID(static_cast<jclass>(handle), name.data(), signature.data());
 }
 
+jmethodID Class::getStaticMethod(const std::string_view& name, const std::string_view& signature) const {
+    nullCheck();
+    return getEnv()->GetStaticMethodID(static_cast<jclass>(handle), name.data(), signature.data());
+}
+
 Object Class::newInstanceInternal(jmethodID method, const value_t* args) const {
     nullCheck();
     return getEnv()->NewObjectA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+
+template <> void Class::invokeStaticInternal<void>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    getEnv()->CallStaticVoidMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+
+template <> bool Class::invokeStaticInternal<bool>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticBooleanMethodA(static_cast<jclass>(handle), method,
+                                              reinterpret_cast<const jvalue*>(args));
+}
+template <> uint8_t Class::invokeStaticInternal<uint8_t>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticByteMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+template <> uint16_t Class::invokeStaticInternal<uint16_t>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticCharMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+template <> int16_t Class::invokeStaticInternal<int16_t>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticShortMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+template <> int32_t Class::invokeStaticInternal<int32_t>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticIntMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+template <> int64_t Class::invokeStaticInternal<int64_t>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticLongMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+template <> float Class::invokeStaticInternal<float>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticFloatMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+}
+template <> double Class::invokeStaticInternal<double>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticDoubleMethodA(static_cast<jclass>(handle), method,
+                                             reinterpret_cast<const jvalue*>(args));
+}
+template <> std::string Class::invokeStaticInternal<std::string>(jmethodID method, const value_t* args) const {
+    Object temp = invokeStaticInternal<Object>(method, args);
+    return asString(static_cast<jstring>(static_cast<jobject>(temp)));
+}
+template <> Object Class::invokeStaticInternal<Object>(jmethodID method, const value_t* args) const {
+    nullCheck();
+    return getEnv()->CallStaticObjectMethodA(static_cast<jclass>(handle), method,
+                                             reinterpret_cast<const jvalue*>(args));
 }
 
 static JNIEnv* jniEnv = nullptr;
