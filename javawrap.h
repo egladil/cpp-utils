@@ -35,16 +35,19 @@ class Class;
 
 template <typename T> class TypedArray;
 
-class NullException : public parse_exception {
+class JWrapException : public parse_exception {
   public:
-    explicit NullException(const std::string& msg) : parse_exception(msg) {}
-    explicit NullException(const char* msg) : parse_exception(msg) {}
+    using parse_exception::parse_exception;
 };
 
-class CastException : public parse_exception {
+class NullException : public JWrapException {
   public:
-    explicit CastException(const std::string& msg) : parse_exception(msg) {}
-    explicit CastException(const char* msg) : parse_exception(msg) {}
+    using JWrapException::JWrapException;
+};
+
+class CastException : public JWrapException {
+  public:
+    using JWrapException::JWrapException;
 };
 
 namespace detail {
@@ -468,6 +471,35 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
         return invokeStatic<TReturn, TArgs...>(methodId, args...);
     }
 };
+
+using Throwable = TypedObject<decltype("java/lang/Throwable"_class)>;
+
+class JavaException : public JWrapException {
+  private:
+    Throwable cause;
+
+  public:
+    explicit JavaException(const std::string& msg, const Throwable& cause) : JWrapException(msg), cause(cause) {}
+    explicit JavaException(const std::string& msg, Throwable&& cause)
+        : JWrapException(msg), cause(std::forward<Throwable>(cause)) {}
+    explicit JavaException(const char* msg, const Throwable& cause) : JWrapException(msg), cause(cause) {}
+    explicit JavaException(const char* msg, Throwable&& cause)
+        : JWrapException(msg), cause(std::forward<Throwable>(cause)) {}
+
+    const Throwable& getCause() const { return cause; }
+};
+
+template <typename T> T throwReturn(const Throwable& throwable) {
+    throwReturn<void>(throwable);
+    return T();
+}
+
+template <> void throwReturn(const Throwable& throwable);
+
+template <typename T> T rethrowReturn(const JavaException& ex) {
+    Throwable throwable(Class::forName("java/lang/RuntimeException").newInstance(ex.what(), ex.getCause()));
+    return throwReturn<T>(throwable);
+}
 
 template <char... chars> Class ClassId<chars...>::clazz() {
     return Class::forName(ClassId::name);

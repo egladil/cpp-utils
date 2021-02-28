@@ -1,5 +1,7 @@
 #include "javawrap.h"
 
+#include <sstream>
+
 #include <jni.h>
 
 namespace {
@@ -25,10 +27,28 @@ class NullTerminatedString {
     }
 };
 
+void handleJniExceptionInternal(const std::string_view& info, const std::string_view& file, int32_t line) {
+    jthrowable exception = jwrap::getEnv()->ExceptionOccurred();
+    if (exception == nullptr) {
+        return;
+    }
+
+    jwrap::getEnv()->ExceptionClear();
+
+    std::ostringstream msg;
+    msg << info << " (" << file << ":" << line << ")";
+
+    throw jwrap::JavaException(msg.str(), jwrap::Throwable(std::move(exception)));
+}
+
+#define handleJniException(x) handleJniExceptionInternal(x, __FILE__, __LINE__)
+
 std::string asString(jstring string) {
     const char* temp = jwrap::getEnv()->GetStringUTFChars(string, nullptr);
     std::string result = temp;
     jwrap::getEnv()->ReleaseStringUTFChars(string, temp);
+
+    handleJniException("string conversion");
 
     return result;
 }
@@ -90,6 +110,8 @@ value_t toValue(const std::string_view& value) {
 
     val.l = getEnv()->NewStringUTF(NullTerminatedString(value));
 
+    handleJniException("string conversion");
+
     return reinterpret_cast<value_t&>(val);
 }
 
@@ -102,12 +124,14 @@ value_t toValue(const Object& value) {
 template <> void destroyTempValue<std::string_view>(value_t value) {
     if (value != 0) {
         getEnv()->DeleteLocalRef(reinterpret_cast<jvalue&>(value).l);
+        handleJniException("destroy temp value");
     }
 }
 } // namespace detail
 
 Object::Object(const jobject& handle) {
     this->handle = getEnv()->NewLocalRef(handle);
+    handleJniException("new local ref");
 }
 
 Object::Object(jobject&& handle) : handle(std::move(handle)) {
@@ -116,6 +140,7 @@ Object::Object(jobject&& handle) : handle(std::move(handle)) {
 
 Object::Object(const Object& object) {
     this->handle = getEnv()->NewLocalRef(object.handle);
+    handleJniException("new local ref");
 }
 
 Object::Object(Object&& object) : handle(std::move(object.handle)) {
@@ -156,6 +181,7 @@ Object::Object(double boxedValue) {
 
 Object::Object(const std::string_view& string) {
     handle = getEnv()->NewStringUTF(NullTerminatedString(string));
+    handleJniException("string conversion");
 }
 
 Object::~Object() {
@@ -178,25 +204,34 @@ jobject Object::newHandle() const {
         return nullptr;
     }
 
-    return getEnv()->NewLocalRef(handle);
+    jobject result = getEnv()->NewLocalRef(handle);
+    handleJniException("new local ref");
+    return std::move(result);
 }
 
 Object Object::newLocalRef() const {
-    return getEnv()->NewLocalRef(handle);
+    jobject result = getEnv()->NewLocalRef(handle);
+    handleJniException("new local ref");
+    return std::move(result);
 }
 
 Object Object::newGlobalRef() const {
-    return getEnv()->NewGlobalRef(handle);
+    jobject result = getEnv()->NewGlobalRef(handle);
+    handleJniException("new global ref");
+    return std::move(result);
 }
 
 Object Object::newWeakGlobalRef() const {
-    return getEnv()->NewWeakGlobalRef(handle);
+    jobject result = getEnv()->NewWeakGlobalRef(handle);
+    handleJniException("new weak global ref");
+    return std::move(result);
 }
 
 Object& Object::operator=(const Object& other) {
     free();
 
     handle = getEnv()->NewLocalRef(other.handle);
+    handleJniException("new local ref");
 
     return *this;
 }
@@ -211,17 +246,31 @@ Object& Object::operator=(Object&& other) {
 }
 
 bool Object::operator==(const Object& other) const {
-    return handle == other.handle || getEnv()->IsSameObject(handle, other.handle);
+    if (handle == other.handle) {
+        return true;
+    }
+
+    bool result = getEnv()->IsSameObject(handle, other.handle);
+    handleJniException("equality");
+    return result;
 }
 
 bool Object::operator==(nullptr_t) const {
-    return handle == nullptr || getEnv()->IsSameObject(handle, nullptr);
+    if (handle == nullptr) {
+        return true;
+    }
+
+    bool result = getEnv()->IsSameObject(handle, nullptr);
+    handleJniException("equality");
+    return result;
 }
 
 Class Object::getClass() const {
     nullCheck();
 
-    return getEnv()->GetObjectClass(handle);
+    jclass result = getEnv()->GetObjectClass(handle);
+    handleJniException("get class");
+    return std::move(result);
 }
 
 bool Object::equals(const Object& other) const {
@@ -239,56 +288,76 @@ std::string Object::toString() const {
 template <> void Object::invokeInternal<void>(jmethodID method, const value_t* args) const {
     nullCheck();
     getEnv()->CallVoidMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
 }
 
 template <> bool Object::invokeInternal<bool>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    bool result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> uint8_t Object::invokeInternal<uint8_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    uint8_t result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> uint16_t Object::invokeInternal<uint16_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    uint16_t result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> int16_t Object::invokeInternal<int16_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    int16_t result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> int32_t Object::invokeInternal<int32_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    int32_t result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> int64_t Object::invokeInternal<int64_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    int64_t result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> float Object::invokeInternal<float>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    float result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> double Object::invokeInternal<double>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    double result = getEnv()->CallBooleanMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return result;
 }
 
 template <> std::string Object::invokeInternal<std::string>(jmethodID method, const value_t* args) const {
     Object temp = invokeInternal<Object>(method, args);
+    handleJniException("invoke");
     return asString(static_cast<jstring>(temp.handle));
 }
 
 template <> Object Object::invokeInternal<Object>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallObjectMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    jobject result = getEnv()->CallObjectMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke");
+    return std::move(result);
 }
 
 Class::Class(const jclass& handle) : TypedObject(static_cast<jobject>(handle), 0) {
@@ -298,13 +367,17 @@ Class::Class(jclass&& handle) : TypedObject(std::forward<jobject>(handle), 0) {
 }
 
 Class Class::forName(const std::string_view& name) {
-    return getEnv()->FindClass(NullTerminatedString(name));
+    jclass result = getEnv()->FindClass(NullTerminatedString(name));
+    handleJniException("find class");
+    return std::move(result);
 }
 
 bool Class::isAssignableFrom(const Class& subclass) const {
     nullCheck();
     subclass.nullCheck();
-    return getEnv()->IsAssignableFrom(static_cast<jclass>(subclass.handle), static_cast<jclass>(handle));
+    bool result = getEnv()->IsAssignableFrom(static_cast<jclass>(subclass.handle), static_cast<jclass>(handle));
+    handleJniException("is assignable");
+    return result;
 }
 
 std::string Class::getName() const {
@@ -313,68 +386,105 @@ std::string Class::getName() const {
 
 jmethodID Class::getMethod(const std::string_view& name, const std::string_view& signature) const {
     nullCheck();
-    return getEnv()->GetMethodID(static_cast<jclass>(handle), NullTerminatedString(name),
-                                 NullTerminatedString(signature));
+    jmethodID result =
+        getEnv()->GetMethodID(static_cast<jclass>(handle), NullTerminatedString(name), NullTerminatedString(signature));
+    handleJniException("get method");
+    return result;
 }
 
 jmethodID Class::getStaticMethod(const std::string_view& name, const std::string_view& signature) const {
     nullCheck();
-    return getEnv()->GetStaticMethodID(static_cast<jclass>(handle), NullTerminatedString(name),
-                                       NullTerminatedString(signature));
+    jmethodID result = getEnv()->GetStaticMethodID(static_cast<jclass>(handle), NullTerminatedString(name),
+                                                   NullTerminatedString(signature));
+    handleJniException("get static method");
+    return result;
 }
 
 Object Class::newInstanceInternal(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->NewObjectA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    jobject result = getEnv()->NewObjectA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("new instance");
+    return std::move(result);
 }
 
 template <> void Class::invokeStaticInternal<void>(jmethodID method, const value_t* args) const {
     nullCheck();
     getEnv()->CallStaticVoidMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
 }
 
 template <> bool Class::invokeStaticInternal<bool>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticBooleanMethodA(static_cast<jclass>(handle), method,
-                                              reinterpret_cast<const jvalue*>(args));
+    bool result =
+        getEnv()->CallStaticBooleanMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> uint8_t Class::invokeStaticInternal<uint8_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticByteMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    uint8_t result =
+        getEnv()->CallStaticByteMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> uint16_t Class::invokeStaticInternal<uint16_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticCharMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    uint16_t result =
+        getEnv()->CallStaticCharMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> int16_t Class::invokeStaticInternal<int16_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticShortMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    int16_t result =
+        getEnv()->CallStaticShortMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> int32_t Class::invokeStaticInternal<int32_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticIntMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    int32_t result =
+        getEnv()->CallStaticIntMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> int64_t Class::invokeStaticInternal<int64_t>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticLongMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    int64_t result =
+        getEnv()->CallStaticLongMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> float Class::invokeStaticInternal<float>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticFloatMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    float result =
+        getEnv()->CallStaticFloatMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> double Class::invokeStaticInternal<double>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticDoubleMethodA(static_cast<jclass>(handle), method,
-                                             reinterpret_cast<const jvalue*>(args));
+    double result =
+        getEnv()->CallStaticDoubleMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return result;
 }
 template <> std::string Class::invokeStaticInternal<std::string>(jmethodID method, const value_t* args) const {
     Object temp = invokeStaticInternal<Object>(method, args);
+    handleJniException("invoke static");
     return asString(static_cast<jstring>(static_cast<jobject>(temp)));
 }
 template <> Object Class::invokeStaticInternal<Object>(jmethodID method, const value_t* args) const {
     nullCheck();
-    return getEnv()->CallStaticObjectMethodA(static_cast<jclass>(handle), method,
-                                             reinterpret_cast<const jvalue*>(args));
+    jobject result =
+        getEnv()->CallStaticObjectMethodA(static_cast<jclass>(handle), method, reinterpret_cast<const jvalue*>(args));
+    handleJniException("invoke static");
+    return std::move(result);
+}
+
+template <> void throwReturn(const Throwable& throwable) {
+    throwable.nullCheck();
+    getEnv()->Throw(static_cast<jthrowable>(static_cast<jobject>(throwable)));
 }
 
 static JNIEnv* jniEnv = nullptr;
