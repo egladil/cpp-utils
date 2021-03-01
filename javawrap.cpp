@@ -349,7 +349,6 @@ template <> double Object::invokeInternal<double>(jmethodID method, const value_
 
 template <> std::string Object::invokeInternal<std::string>(jmethodID method, const value_t* args) const {
     Object temp = invokeInternal<Object>(method, args);
-    handleJniException("invoke");
     return asString(static_cast<jstring>(temp.handle));
 }
 
@@ -358,6 +357,132 @@ template <> Object Object::invokeInternal<Object>(jmethodID method, const value_
     jobject result = getEnv()->CallObjectMethodA(handle, method, reinterpret_cast<const jvalue*>(args));
     handleJniException("invoke");
     return std::move(result);
+}
+
+template <> bool Object::getInternal<bool>(jfieldID field) const {
+    nullCheck();
+    bool result = getEnv()->GetBooleanField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> uint8_t Object::getInternal<uint8_t>(jfieldID field) const {
+    nullCheck();
+    uint8_t result = getEnv()->GetByteField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> uint16_t Object::getInternal<uint16_t>(jfieldID field) const {
+    nullCheck();
+    uint16_t result = getEnv()->GetCharField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> int16_t Object::getInternal<int16_t>(jfieldID field) const {
+    nullCheck();
+    int16_t result = getEnv()->GetShortField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> int32_t Object::getInternal<int32_t>(jfieldID field) const {
+    nullCheck();
+    int32_t result = getEnv()->GetIntField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> int64_t Object::getInternal<int64_t>(jfieldID field) const {
+    nullCheck();
+    int64_t result = getEnv()->GetLongField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> float Object::getInternal<float>(jfieldID field) const {
+    nullCheck();
+    float result = getEnv()->GetFloatField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> double Object::getInternal<double>(jfieldID field) const {
+    nullCheck();
+    double result = getEnv()->GetDoubleField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+template <> std::string Object::getInternal<std::string>(jfieldID field) const {
+    Object temp = getInternal<Object>(field);
+    return asString(static_cast<jstring>(temp.handle));
+}
+
+template <> Object Object::getInternal<Object>(jfieldID field) const {
+    nullCheck();
+    jobject result = getEnv()->GetObjectField(handle, field);
+    handleJniException("get");
+    return result;
+}
+
+void Object::setInternal(jfieldID field, bool value) const {
+    nullCheck();
+    getEnv()->SetBooleanField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, uint8_t value) const {
+    nullCheck();
+    getEnv()->SetByteField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, uint16_t value) const {
+    nullCheck();
+    getEnv()->SetCharField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, int16_t value) const {
+    nullCheck();
+    getEnv()->SetShortField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, int32_t value) const {
+    nullCheck();
+    getEnv()->SetIntField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, int64_t value) const {
+    nullCheck();
+    getEnv()->SetLongField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, float value) const {
+    nullCheck();
+    getEnv()->SetFloatField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, double value) const {
+    nullCheck();
+    getEnv()->SetDoubleField(handle, field, value);
+    handleJniException("set");
+}
+
+void Object::setInternal(jfieldID field, const std::string_view& value) const {
+    setInternal(field, Object(value));
+}
+
+void Object::setInternal(jfieldID field, const Object& value) const {
+    nullCheck();
+    getEnv()->SetObjectField(handle, field, value.handle);
+    handleJniException("set");
 }
 
 Class::Class(const jclass& handle) : TypedObject(static_cast<jobject>(handle), 0) {
@@ -393,6 +518,22 @@ jmethodID Class::getStaticMethod(const std::string_view& name, const std::string
     jmethodID result = getEnv()->GetStaticMethodID(static_cast<jclass>(handle), NullTerminatedString(name),
                                                    NullTerminatedString(signature));
     handleJniException("get static method");
+    return result;
+}
+
+jfieldID Class::getField(const std::string_view& name, const std::string_view& signature) const {
+    nullCheck();
+    jfieldID result =
+        getEnv()->GetFieldID(static_cast<jclass>(handle), NullTerminatedString(name), NullTerminatedString(signature));
+    handleJniException("get field");
+    return result;
+}
+
+jfieldID Class::getStaticField(const std::string_view& name, const std::string_view& signature) const {
+    nullCheck();
+    jfieldID result = getEnv()->GetStaticFieldID(static_cast<jclass>(handle), NullTerminatedString(name),
+                                                 NullTerminatedString(signature));
+    handleJniException("get static field");
     return result;
 }
 

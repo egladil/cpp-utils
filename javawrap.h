@@ -28,6 +28,7 @@ typedef _jobject* jobject;
 typedef _jclass* jclass;
 typedef _jarray* jarray;
 typedef struct _jmethodID* jmethodID;
+typedef struct _jfieldID* jfieldID;
 typedef uint64_t value_t;
 
 class Object;
@@ -231,6 +232,7 @@ template <typename... TArgs> class Arguments {
 
     const value_t* data() const { return values.data(); }
 };
+
 } // namespace detail
 
 template <char... chars> struct ClassId {
@@ -255,6 +257,41 @@ template <typename TReturn, typename... TArgs> class MethodId {
     operator jmethodID() const { return id; }
 };
 
+template <typename T> class FieldId {
+  private:
+    jfieldID id;
+
+  public:
+    explicit FieldId(jfieldID id) : id(id) {}
+
+    operator jfieldID() const { return id; }
+};
+
+namespace detail {
+
+template <typename T> class FieldAccess {
+  private:
+    const Object& obj;
+    FieldId<T> fieldId;
+
+  public:
+    using value_type = T;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+
+    FieldAccess(const Object& obj, FieldId<T> fieldId) : obj(obj), fieldId(fieldId) {}
+
+    operator value_type() const { return obj.get<T>(fieldId); }
+
+    FieldAccess& operator=(const_reference value) {
+        obj.set<T>(fieldId, value);
+        return *this;
+    }
+};
+} // namespace detail
+
 class Object {
   protected:
     jobject handle = nullptr;
@@ -274,6 +311,30 @@ class Object {
     template <> double invokeInternal<double>(jmethodID method, const value_t* args) const;
     template <> std::string invokeInternal<std::string>(jmethodID method, const value_t* args) const;
     template <> Object invokeInternal<Object>(jmethodID method, const value_t* args) const;
+
+    template <typename T> T getInternal(jfieldID field) const { return static_cast<T>(getInternal<Object>(field)); }
+
+    template <> bool getInternal<bool>(jfieldID field) const;
+    template <> uint8_t getInternal<uint8_t>(jfieldID field) const;
+    template <> uint16_t getInternal<uint16_t>(jfieldID field) const;
+    template <> int16_t getInternal<int16_t>(jfieldID field) const;
+    template <> int32_t getInternal<int32_t>(jfieldID field) const;
+    template <> int64_t getInternal<int64_t>(jfieldID field) const;
+    template <> float getInternal<float>(jfieldID field) const;
+    template <> double getInternal<double>(jfieldID field) const;
+    template <> std::string getInternal<std::string>(jfieldID field) const;
+    template <> Object getInternal<Object>(jfieldID field) const;
+
+    void setInternal(jfieldID field, bool value) const;
+    void setInternal(jfieldID field, uint8_t value) const;
+    void setInternal(jfieldID field, uint16_t value) const;
+    void setInternal(jfieldID field, int16_t value) const;
+    void setInternal(jfieldID field, int32_t value) const;
+    void setInternal(jfieldID field, int64_t value) const;
+    void setInternal(jfieldID field, float value) const;
+    void setInternal(jfieldID field, double value) const;
+    void setInternal(jfieldID field, const std::string_view& value) const;
+    void setInternal(jfieldID field, const Object& value) const;
 
   public:
     constexpr Object() noexcept = default;
@@ -334,6 +395,22 @@ class Object {
     template <typename TReturn, typename... TArgs> auto operator->*(MethodId<TReturn, TArgs...> methodId) {
         return [this, methodId](const TArgs&... args) { return invoke<TReturn, TArgs...>(methodId, args...); };
     }
+
+    template <typename T> T get(FieldId<T> fieldId) const { return getInternal<T>(fieldId); }
+
+    template <typename T> void set(FieldId<T> fieldId, const T& value) const { setInternal(fieldId, value); }
+
+    template <typename T> T get(const std::string_view& field) const {
+        auto fieldId = getClass().getField<T>(field);
+        return get<T>(fieldId);
+    }
+
+    template <typename T> void set(const std::string_view& field, const T& value) const {
+        auto fieldId = getClass().getField<T>(field);
+        set<T>(fieldId, value);
+    }
+
+    template <typename T> auto operator->*(FieldId<T> fieldId) { return detail::FieldAccess<T>(*this, fieldId); }
 
     bool equals(const Object& other) const;
     int32_t hashCode() const;
@@ -398,6 +475,8 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
   private:
     jmethodID getMethod(const std::string_view& name, const std::string_view& signature) const;
     jmethodID getStaticMethod(const std::string_view& name, const std::string_view& signature) const;
+    jfieldID getField(const std::string_view& name, const std::string_view& signature) const;
+    jfieldID getStaticField(const std::string_view& name, const std::string_view& signature) const;
 
     Object newInstanceInternal(jmethodID method, const value_t* args) const;
 
@@ -453,7 +532,7 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
 
     static Class forName(const std::string_view& name);
 
-    template <typename... TArgs> Object newInstance(MethodId<TReturn, TArgs...> methodId, const TArgs&... args) const {
+    template <typename... TArgs> Object newInstance(MethodId<void, TArgs...> methodId, const TArgs&... args) const {
         detail::Arguments<TArgs...> values(args...);
         return newInstanceInternal(methodId, values.data());
     }
@@ -465,7 +544,7 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
 
     bool isAssignableFrom(const Class& subclass) const;
 
-    std::string Class::getName() const { return invoke<std::string>("getName"); }
+    std::string getName() const { return invoke<std::string>("getName"); }
 
     template <typename TReturn, typename... TArgs> auto getMethod(const std::string_view& name) const {
         return MethodId<TReturn, TArgs...>(
@@ -475,6 +554,14 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
     template <typename TReturn, typename... TArgs> auto getStaticMethod(const std::string_view& name) const {
         return MethodId<TReturn, TArgs...>(
             getStaticMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature.chars));
+    }
+
+    template <typename T> auto getField(const std::string_view& name) const {
+        return FieldId<T>(getField(name, detail::TypeSignature<T>::signature.chars));
+    }
+
+    template <typename T> auto getStaticField(const std::string_view& name) const {
+        return FieldId<T>(getStaticField(name, detail::TypeSignature<T>::signature.chars));
     }
 
     template <typename TReturn, typename... TArgs>
