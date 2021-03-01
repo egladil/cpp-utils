@@ -475,6 +475,28 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
         typeCheck();
         return *this;
     }
+
+    template <typename TReturn, typename... TArgs>
+    static TReturn invokeStatic(MethodId<TReturn, TArgs...> methodId, const TArgs&... args) {
+        return clazz().invokeStatic<TReturn, TArgs...>(methodId, args...);
+    }
+
+    template <typename TReturn, typename... TArgs>
+    static TReturn invokeStatic(const std::string_view& method, const TArgs&... args) {
+        return clazz().invokeStatic<TReturn, TArgs...>(method, args...);
+    }
+
+    template <typename T> static T getStatic(FieldId<T> fieldId) { return clazz().getStatic<T>(fieldId); }
+
+    template <typename T> static void setStatic(FieldId<T> fieldId, const T& value) {
+        clazz().setStatic<T>(fieldId, value);
+    }
+
+    template <typename T> static T getStatic(const std::string_view& field) { return clazz().getStatic<T>(field); }
+
+    template <typename T> static void setStatic(const std::string_view& field, const T& value) {
+        clazz().setStatic<T>(field, value);
+    }
 };
 
 class Class : public TypedObject<decltype("java/lang/Class"_class)> {
