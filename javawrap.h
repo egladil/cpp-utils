@@ -496,6 +496,32 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
     template <> std::string invokeStaticInternal<std::string>(jmethodID method, const value_t* args) const;
     template <> Object invokeStaticInternal<Object>(jmethodID method, const value_t* args) const;
 
+    template <typename T> T getStaticInternal(jfieldID field) const {
+        return static_cast<T>(getStaticInternal<Object>(field));
+    }
+
+    template <> bool getStaticInternal<bool>(jfieldID field) const;
+    template <> uint8_t getStaticInternal<uint8_t>(jfieldID field) const;
+    template <> uint16_t getStaticInternal<uint16_t>(jfieldID field) const;
+    template <> int16_t getStaticInternal<int16_t>(jfieldID field) const;
+    template <> int32_t getStaticInternal<int32_t>(jfieldID field) const;
+    template <> int64_t getStaticInternal<int64_t>(jfieldID field) const;
+    template <> float getStaticInternal<float>(jfieldID field) const;
+    template <> double getStaticInternal<double>(jfieldID field) const;
+    template <> std::string getStaticInternal<std::string>(jfieldID field) const;
+    template <> Object getStaticInternal<Object>(jfieldID field) const;
+
+    void setStaticInternal(jfieldID field, bool value) const;
+    void setStaticInternal(jfieldID field, uint8_t value) const;
+    void setStaticInternal(jfieldID field, uint16_t value) const;
+    void setStaticInternal(jfieldID field, int16_t value) const;
+    void setStaticInternal(jfieldID field, int32_t value) const;
+    void setStaticInternal(jfieldID field, int64_t value) const;
+    void setStaticInternal(jfieldID field, float value) const;
+    void setStaticInternal(jfieldID field, double value) const;
+    void setStaticInternal(jfieldID field, const std::string_view& value) const;
+    void setStaticInternal(jfieldID field, const Object& value) const;
+
   public:
     Class(const Class& object) : TypedObject(static_cast<TypedObject>(object)) {}
 
@@ -574,6 +600,22 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
     TReturn invokeStatic(const std::string_view& method, const TArgs&... args) const {
         auto methodId = getStaticMethod<TReturn, TArgs...>(method);
         return invokeStatic<TReturn, TArgs...>(methodId, args...);
+    }
+
+    template <typename T> T getStatic(FieldId<T> fieldId) const { return getStaticInternal<T>(fieldId); }
+
+    template <typename T> void setStatic(FieldId<T> fieldId, const T& value) const {
+        setStaticInternal(fieldId, value);
+    }
+
+    template <typename T> T getStatic(const std::string_view& field) const {
+        auto fieldId = getStaticField<T>(field);
+        return getStatic<T>(fieldId);
+    }
+
+    template <typename T> void setStatic(const std::string_view& field, const T& value) const {
+        auto fieldId = getStaticField<T>(field);
+        setStatic<T>(fieldId, value);
     }
 };
 

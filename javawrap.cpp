@@ -619,6 +619,132 @@ template <> Object Class::invokeStaticInternal<Object>(jmethodID method, const v
     return std::move(result);
 }
 
+template <> bool Class::getStaticInternal<bool>(jfieldID field) const {
+    nullCheck();
+    bool result = getEnv()->GetStaticBooleanField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> uint8_t Class::getStaticInternal<uint8_t>(jfieldID field) const {
+    nullCheck();
+    uint8_t result = getEnv()->GetStaticByteField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> uint16_t Class::getStaticInternal<uint16_t>(jfieldID field) const {
+    nullCheck();
+    uint16_t result = getEnv()->GetStaticCharField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> int16_t Class::getStaticInternal<int16_t>(jfieldID field) const {
+    nullCheck();
+    int16_t result = getEnv()->GetStaticShortField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> int32_t Class::getStaticInternal<int32_t>(jfieldID field) const {
+    nullCheck();
+    int32_t result = getEnv()->GetStaticIntField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> int64_t Class::getStaticInternal<int64_t>(jfieldID field) const {
+    nullCheck();
+    int64_t result = getEnv()->GetStaticLongField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> float Class::getStaticInternal<float>(jfieldID field) const {
+    nullCheck();
+    float result = getEnv()->GetStaticFloatField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> double Class::getStaticInternal<double>(jfieldID field) const {
+    nullCheck();
+    double result = getEnv()->GetStaticDoubleField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+template <> std::string Class::getStaticInternal<std::string>(jfieldID field) const {
+    Object temp = getStaticInternal<Object>(field);
+    return asString(static_cast<jstring>(static_cast<jobject>(temp)));
+}
+
+template <> Object Class::getStaticInternal<Object>(jfieldID field) const {
+    nullCheck();
+    jobject result = getEnv()->GetStaticObjectField(static_cast<jclass>(handle), field);
+    handleJniException("get static");
+    return result;
+}
+
+void Class::setStaticInternal(jfieldID field, bool value) const {
+    nullCheck();
+    getEnv()->SetStaticBooleanField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, uint8_t value) const {
+    nullCheck();
+    getEnv()->SetStaticByteField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, uint16_t value) const {
+    nullCheck();
+    getEnv()->SetStaticCharField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, int16_t value) const {
+    nullCheck();
+    getEnv()->SetStaticShortField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, int32_t value) const {
+    nullCheck();
+    getEnv()->SetStaticIntField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, int64_t value) const {
+    nullCheck();
+    getEnv()->SetStaticLongField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, float value) const {
+    nullCheck();
+    getEnv()->SetStaticFloatField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, double value) const {
+    nullCheck();
+    getEnv()->SetStaticDoubleField(static_cast<jclass>(handle), field, value);
+    handleJniException("set static");
+}
+
+void Class::setStaticInternal(jfieldID field, const std::string_view& value) const {
+    setStaticInternal(field, Object(value));
+}
+
+void Class::setStaticInternal(jfieldID field, const Object& value) const {
+    nullCheck();
+    getEnv()->SetStaticObjectField(static_cast<jclass>(handle), field, static_cast<jobject>(value));
+    handleJniException("set static");
+}
+
 template <> void throwReturn(const Throwable& throwable) {
     throwable.nullCheck();
     getEnv()->Throw(static_cast<jthrowable>(static_cast<jobject>(throwable)));
