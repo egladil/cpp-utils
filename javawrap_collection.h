@@ -246,7 +246,7 @@ template <typename TDerived, typename T> class ListOperations : public Collectio
     void push_back(const value_type& value) { add(value); }
 
     template <class... Args> value_type emplace_back(Args&&... args) {
-        value_type value = value_type::clazz.clazz().newInstance(args...);
+        value_type value = value_type::clazz().newInstance(args...);
         add(value);
         return value;
     }

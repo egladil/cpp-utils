@@ -261,7 +261,7 @@ template <typename TArray> class ArrayConstIterator {
 
 template <typename T, typename TDerived, typename ClassId> class ArrayBase : public TypedObject<ClassId> {
   public:
-    using clazz = typename TypedObject<ClassId>::clazz;
+    using classId = typename TypedObject<ClassId>::classId;
 
   protected:
     size_t _size;

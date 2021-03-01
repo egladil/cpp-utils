@@ -73,7 +73,7 @@ template <size_t... Length> constexpr auto concatenate(const char (&... strings)
 }
 
 template <typename T> struct TypeSignature {
-    constexpr static auto name = concatenate(T::clazz::name);
+    constexpr static auto name = concatenate(T::classId::name);
     constexpr static auto signature = concatenate("L", name.chars, ";");
 };
 
@@ -128,6 +128,11 @@ template <> struct TypeSignature<std::string_view> {
 };
 
 template <> struct TypeSignature<std::string> {
+    constexpr static auto name = concatenate("java/lang/String");
+    constexpr static auto signature = concatenate("L", name.chars, ";");
+};
+
+template <size_t Size> struct TypeSignature<char[Size]> {
     constexpr static auto name = concatenate("java/lang/String");
     constexpr static auto signature = concatenate("L", name.chars, ";");
 };
@@ -419,7 +424,8 @@ class Object {
 
 template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public Object {
   public:
-    using clazz = ClassId<ClassName...>;
+    using classId = ClassId<ClassName...>;
+    static Class clazz();
 
   protected:
     TypedObject(const jobject& handle, int32_t) : Object(handle) {}
@@ -439,8 +445,8 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
         }
 
         Class actual = getClass();
-        if (!clazz::clazz().isAssignableFrom(actual)) {
-            throw CastException(actual.getName() + " cannot be cast to " + std::string(clazz::name));
+        if (!clazz().isAssignableFrom(actual)) {
+            throw CastException(actual.getName() + detail::concatenate(" cannot be cast to ", classId::name).chars);
         }
     }
 
@@ -650,6 +656,10 @@ template <typename T> T rethrowReturn(const JavaException& ex) {
 
 template <char... chars> Class ClassId<chars...>::clazz() {
     return Class::forName(ClassId::name);
+}
+
+template <char... ClassName> Class TypedObject<ClassId<ClassName...>>::clazz() {
+    return ClassId<ClassName...>::clazz();
 }
 
 template <typename ClassId> TypedObject<ClassId> java_cast(const Object& object) {
