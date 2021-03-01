@@ -380,10 +380,6 @@ bool Class::isAssignableFrom(const Class& subclass) const {
     return result;
 }
 
-std::string Class::getName() const {
-    return invoke<std::string>("getName");
-}
-
 jmethodID Class::getMethod(const std::string_view& name, const std::string_view& signature) const {
     nullCheck();
     jmethodID result =
