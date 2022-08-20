@@ -274,7 +274,7 @@ Class Object::getClass() const {
 }
 
 bool Object::equals(const Object& other) const {
-    return invoke<bool>("equals", java_cast<decltype("java/lang/Object"_class)>(other));
+    return invoke<bool>("equals", java_cast<decltype("java.lang.Object"_class)>(other));
 }
 
 int32_t Object::hashCode() const {

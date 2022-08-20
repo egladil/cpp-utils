@@ -15,3 +15,5 @@ target_include_directories(jwrap PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(JNI REQUIRED)
 target_include_directories(jwrap PRIVATE ${JNI_INCLUDE_DIRS})
+
+target_link_libraries(jwrap "string")

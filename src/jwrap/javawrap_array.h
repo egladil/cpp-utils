@@ -287,8 +287,7 @@ template <typename T, typename TDerived, typename ClassId> class ArrayBase : pub
 
     ArrayBase(TypedObject<ClassId>&& object) : TypedObject<ClassId>(std::forward<TypedObject<ClassId>>(object)) {}
 
-    explicit ArrayBase(size_t size)
-        : TypedObject<ClassId>(arrayCreate<T>(TypeSignature<T>::name.chars, size)), _size(size) {}
+    explicit ArrayBase(size_t size) : TypedObject<ClassId>(arrayCreate<T>(TypeSignature<T>::name, size)), _size(size) {}
 
     ArrayBase(const T* data, size_t size) : ArrayBase(size) { arrayInitialize<T>(*this, data, _size); }
 

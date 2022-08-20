@@ -7,6 +7,9 @@
 #include <string_view>
 #include <vector>
 
+#include "inline_string.h"
+#include "string_util.h"
+
 struct JNIEnv_;
 struct _JNIEnv;
 struct _jmethodID;
@@ -51,128 +54,109 @@ class CastException : public JWrapException {
 };
 
 namespace detail {
-template <size_t Size> struct StringWrapper {
-    constexpr static const size_t size = Size;
-    char chars[size];
-};
-
-template <size_t... Length> constexpr auto concatenate(const char (&... strings)[Length]) {
-    constexpr size_t TotalLength = (... + Length) - sizeof...(Length);
-    StringWrapper<TotalLength + 1> result = {};
-    result.chars[TotalLength] = '\0';
-
-    char* dst = result.chars;
-    for (const char* src : {strings...}) {
-        for (; *src != '\0'; src++, dst++) {
-            *dst = *src;
-        }
-    }
-    return result;
-}
-
 template <typename T> struct TypeSignature {
-    constexpr static auto name = concatenate(T::classId::name);
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = T::classId::signature;
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <> struct TypeSignature<void> {
-    constexpr static auto signature = concatenate("V");
+    constexpr static auto signature = str::InlineString("V");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<bool> {
-    constexpr static auto signature = concatenate("Z");
+    constexpr static auto signature = str::InlineString("Z");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<uint8_t> {
-    constexpr static auto signature = concatenate("B");
+    constexpr static auto signature = str::InlineString("B");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<uint16_t> {
-    constexpr static auto signature = concatenate("C");
+    constexpr static auto signature = str::InlineString("C");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<int16_t> {
-    constexpr static auto signature = concatenate("S");
+    constexpr static auto signature = str::InlineString("S");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<int32_t> {
-    constexpr static auto signature = concatenate("I");
+    constexpr static auto signature = str::InlineString("I");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<int64_t> {
-    constexpr static auto signature = concatenate("J");
+    constexpr static auto signature = str::InlineString("J");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<float> {
-    constexpr static auto signature = concatenate("F");
+    constexpr static auto signature = str::InlineString("F");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<double> {
-    constexpr static auto signature = concatenate("D");
+    constexpr static auto signature = str::InlineString("D");
     constexpr static auto name = signature;
 };
 
 template <> struct TypeSignature<std::string_view> {
-    constexpr static auto name = concatenate("java/lang/String");
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = str::InlineString("java/lang/String");
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <> struct TypeSignature<std::string> {
-    constexpr static auto name = concatenate("java/lang/String");
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = str::InlineString("java/lang/String");
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <size_t Size> struct TypeSignature<char[Size]> {
-    constexpr static auto name = concatenate("java/lang/String");
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = str::InlineString("java/lang/String");
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <size_t Size> struct TypeSignature<const char[Size]> {
-    constexpr static auto name = concatenate("java/lang/String");
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = str::InlineString("java/lang/String");
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <> struct TypeSignature<char*> {
-    constexpr static auto name = concatenate("java/lang/String");
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = str::InlineString("java/lang/String");
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <> struct TypeSignature<const char*> {
-    constexpr static auto name = concatenate("java/lang/String");
-    constexpr static auto signature = concatenate("L", name.chars, ";");
+    constexpr static auto name = str::InlineString("java/lang/String");
+    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
 };
 
 template <typename T, size_t Size> struct TypeSignature<std::array<T, Size>> {
-    constexpr static auto signature = concatenate("[", TypeSignature<T>::signature.chars);
+    constexpr static auto signature = OptimizedInlineString("[" + TypeSignature<T>::signature);
     constexpr static auto name = signature;
 };
 
 template <typename T, size_t Size> struct TypeSignature<const T[Size]> {
-    constexpr static auto signature = concatenate("[", TypeSignature<T>::signature.chars);
+    constexpr static auto signature = OptimizedInlineString("[" + TypeSignature<T>::signature);
     constexpr static auto name = signature;
 };
 
 template <typename T> struct TypeSignature<const T*> {
-    constexpr static auto signature = concatenate("[", TypeSignature<T>::signature.chars);
+    constexpr static auto signature = OptimizedInlineString("[" + TypeSignature<T>::signature);
     constexpr static auto name = signature;
 };
 
 template <typename T> struct TypeSignature<TypedArray<T>> {
-    constexpr static auto signature = concatenate("[", TypeSignature<T>::signature.chars);
+    constexpr static auto signature = OptimizedInlineString("[" + TypeSignature<T>::signature);
     constexpr static auto name = signature;
 };
 
 template <typename TReturn, typename... TArgs> struct FunctionTypeSignature {
-    constexpr static auto signature =
-        concatenate("(", TypeSignature<TArgs>::signature.chars..., ")", TypeSignature<TReturn>::signature.chars);
+    constexpr static auto signature = OptimizedInlineString(
+        str::concatenate("(", TypeSignature<TArgs>::signature..., ")", TypeSignature<TReturn>::signature));
 };
 
 value_t toValue(bool value);
@@ -240,6 +224,7 @@ template <typename... TArgs> class Arguments {
 
 template <char... chars> struct ClassId {
     constexpr static const char name[sizeof...(chars) + 1] = {chars..., '\0'};
+    constexpr static const auto signature = str::replace(OptimizedInlineString(name), '.', '/');
 
     static Class clazz();
 
@@ -444,7 +429,7 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
 
         Class actual = getClass();
         if (!clazz().isAssignableFrom(actual)) {
-            throw CastException(actual.getName() + detail::concatenate(" cannot be cast to ", classId::name).chars);
+            throw CastException(actual.getName() + (str::InlineString(" cannot be cast to ") + classId::name));
         }
     }
 
@@ -497,7 +482,7 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
     }
 };
 
-class Class : public TypedObject<decltype("java/lang/Class"_class)> {
+class Class : public TypedObject<decltype("java.lang.Class"_class)> {
   private:
     jmethodID getMethod(const std::string_view& name, const std::string_view& signature) const;
     jmethodID getStaticMethod(const std::string_view& name, const std::string_view& signature) const;
@@ -600,20 +585,20 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
 
     template <typename TReturn, typename... TArgs> auto getMethod(const std::string_view& name) const {
         return MethodId<TReturn, TArgs...>(
-            getMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature.chars));
+            getMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature));
     }
 
     template <typename TReturn, typename... TArgs> auto getStaticMethod(const std::string_view& name) const {
         return MethodId<TReturn, TArgs...>(
-            getStaticMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature.chars));
+            getStaticMethod(name, detail::FunctionTypeSignature<TReturn, TArgs...>::signature));
     }
 
     template <typename T> auto getField(const std::string_view& name) const {
-        return FieldId<T>(getField(name, detail::TypeSignature<T>::signature.chars));
+        return FieldId<T>(getField(name, detail::TypeSignature<T>::signature));
     }
 
     template <typename T> auto getStaticField(const std::string_view& name) const {
-        return FieldId<T>(getStaticField(name, detail::TypeSignature<T>::signature.chars));
+        return FieldId<T>(getStaticField(name, detail::TypeSignature<T>::signature));
     }
 
     template <typename TReturn, typename... TArgs>
@@ -645,7 +630,7 @@ class Class : public TypedObject<decltype("java/lang/Class"_class)> {
     }
 };
 
-using Throwable = TypedObject<decltype("java/lang/Throwable"_class)>;
+using Throwable = TypedObject<decltype("java.lang.Throwable"_class)>;
 
 class JavaException : public JWrapException {
   private:
@@ -675,7 +660,7 @@ template <typename T> T rethrowReturn(const JavaException& ex) {
 }
 
 template <char... chars> Class ClassId<chars...>::clazz() {
-    return Class::forName(ClassId::name);
+    return Class::forName(ClassId::signature);
 }
 
 template <char... ClassName> Class TypedObject<ClassId<ClassName...>>::clazz() {

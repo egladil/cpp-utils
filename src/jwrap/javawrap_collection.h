@@ -9,10 +9,10 @@
 namespace jwrap {
 
 namespace detail {
-using JavaLangObject = decltype("java/lang/Object"_class);
+using JavaLangObject = decltype("java.lang.Object"_class);
 }
 
-template <typename T> class Iterator : public TypedObject<decltype("java/util/Iterator"_class)> {
+template <typename T> class Iterator : public TypedObject<decltype("java.util.Iterator"_class)> {
   public:
     Iterator(const Iterator& object) : TypedObject(static_cast<const TypedObject&>(object)) {}
 
@@ -282,7 +282,7 @@ template <typename TDerived, typename T> class ListOperations : public Collectio
 } // namespace detail
 
 template <typename T>
-class Iterable : public TypedObject<decltype("java/util/Iterable"_class)>,
+class Iterable : public TypedObject<decltype("java.util.Iterable"_class)>,
                  public detail::IterableOperations<Iterable<T>, T> {
   public:
     constexpr Iterable() noexcept = default;
@@ -319,7 +319,7 @@ class Iterable : public TypedObject<decltype("java/util/Iterable"_class)>,
 };
 
 template <typename T>
-class Collection : public TypedObject<decltype("java/util/Collection"_class)>,
+class Collection : public TypedObject<decltype("java.util.Collection"_class)>,
                    public detail::CollectionOperations<Collection<T>, T> {
   public:
     constexpr Collection() noexcept = default;
@@ -356,7 +356,7 @@ class Collection : public TypedObject<decltype("java/util/Collection"_class)>,
 };
 
 template <typename T>
-class List : public TypedObject<decltype("java/util/List"_class)>, public detail::ListOperations<List<T>, T> {
+class List : public TypedObject<decltype("java.util.List"_class)>, public detail::ListOperations<List<T>, T> {
   public:
     constexpr List() noexcept = default;
 
