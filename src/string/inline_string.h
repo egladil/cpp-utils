@@ -40,20 +40,15 @@ template <size_t Alloc> class InlineString {
     constexpr InlineString(const InlineString&) = default;
     constexpr InlineString(InlineString&&) = default;
 
-    constexpr InlineString(std::string_view StringView) { append(StringView); }
+    constexpr InlineString(std::string_view stringView) { append(stringView); }
 
-    constexpr InlineString(std::initializer_list<value_type> data) {
-        for (const value_type character : data) {
-            append(character);
-        }
-    }
+    constexpr InlineString(std::initializer_list<value_type> data) { append(data); }
 
-    constexpr InlineString(value_type const (&data)[Alloc]) : InlineString(std::string_view(data)) {}
+    constexpr InlineString(value_type const (&data)[Alloc]) { append<std::string_view>(data); }
 
-    constexpr InlineString(const TStorage<Alloc>& data) : InlineString(std::string_view(data.data())) {}
+    constexpr InlineString(const TStorage<Alloc>& data) { append(data); }
 
-    template <size_t Alloc2>
-    constexpr InlineString(const TStorage<Alloc2>& data) : InlineString(std::string_view(data.data())) {}
+    template <size_t Alloc2> constexpr InlineString(const TStorage<Alloc2>& data) { append(data); }
 
     constexpr auto begin() const { return toStringView().begin(); }
     constexpr auto end() const { return toStringView().end(); }
@@ -101,9 +96,23 @@ template <size_t Alloc> class InlineString {
     }
 
   private:
-    constexpr void append(std::string_view StringView) {
-        for (const value_type character : StringView) {
+    constexpr void append(std::string_view stringView) {
+        for (const value_type character : stringView) {
             if (length + 1 >= Alloc) {
+                return;
+            }
+
+            _data[length] = character;
+            ++length;
+        }
+    }
+
+    template <typename T> constexpr void append(const T& data) {
+        for (const value_type character : data) {
+            if (length + 1 >= Alloc) {
+                return;
+            }
+            if (character == 0) {
                 return;
             }
 
