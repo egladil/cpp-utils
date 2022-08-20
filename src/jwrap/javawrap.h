@@ -110,28 +110,28 @@ template <> struct TypeSignature<std::string_view> {
 };
 
 template <> struct TypeSignature<std::string> {
-    constexpr static auto name = str::InlineString("java/lang/String");
-    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
+    constexpr static auto name = TypeSignature<std::string_view>::name;
+    constexpr static auto signature = TypeSignature<std::string_view>::signature;
 };
 
 template <size_t Size> struct TypeSignature<char[Size]> {
-    constexpr static auto name = str::InlineString("java/lang/String");
-    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
+    constexpr static auto name = TypeSignature<std::string_view>::name;
+    constexpr static auto signature = TypeSignature<std::string_view>::signature;
 };
 
 template <size_t Size> struct TypeSignature<const char[Size]> {
-    constexpr static auto name = str::InlineString("java/lang/String");
-    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
+    constexpr static auto name = TypeSignature<std::string_view>::name;
+    constexpr static auto signature = TypeSignature<std::string_view>::signature;
 };
 
 template <> struct TypeSignature<char*> {
-    constexpr static auto name = str::InlineString("java/lang/String");
-    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
+    constexpr static auto name = TypeSignature<std::string_view>::name;
+    constexpr static auto signature = TypeSignature<std::string_view>::signature;
 };
 
 template <> struct TypeSignature<const char*> {
-    constexpr static auto name = str::InlineString("java/lang/String");
-    constexpr static auto signature = OptimizedInlineString("L" + name + ";");
+    constexpr static auto name = TypeSignature<std::string_view>::name;
+    constexpr static auto signature = TypeSignature<std::string_view>::signature;
 };
 
 template <typename T, size_t Size> struct TypeSignature<std::array<T, Size>> {
