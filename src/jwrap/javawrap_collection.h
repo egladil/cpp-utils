@@ -412,11 +412,11 @@ template <typename TIterable> auto makeArrayList(const TIterable& iterable) {
 }
 
 template <typename T> auto makeHashSet() {
-    return Collection<T>(Class::forName("java/util/makeHashSet").newInstance());
+    return Collection<T>(Class::forName("java/util/HashSet").newInstance());
 }
 
 template <typename T, typename InputIt> auto makeHashSet(InputIt first, InputIt last) {
-    Collection<T> result(Class::forName("java/util/makeHashSet").newInstance((int32_t)(last - first)));
+    Collection<T> result(Class::forName("java/util/HashSet").newInstance((int32_t)(last - first)));
     for (auto current = first; current != last; ++current) {
         result.add(*current);
     }

@@ -223,8 +223,8 @@ template <typename... TArgs> class Arguments {
 } // namespace detail
 
 template <char... chars> struct ClassId {
-    constexpr static const char name[sizeof...(chars) + 1] = {chars..., '\0'};
-    constexpr static const auto signature = str::replace(OptimizedInlineString(name), '.', '/');
+    constexpr static const auto name = OptimizedInlineString(str::InlineString<sizeof...(chars) + 1>({chars..., '\0'}));
+    constexpr static const auto signature = str::replace(name, '.', '/');
 
     static Class clazz();
 
@@ -429,7 +429,8 @@ template <char... ClassName> class TypedObject<ClassId<ClassName...>> : public O
 
         Class actual = getClass();
         if (!clazz().isAssignableFrom(actual)) {
-            throw CastException(actual.getName() + (str::InlineString(" cannot be cast to ") + classId::name));
+            constexpr auto messageTail = OptimizedInlineString(" cannot be cast to " + classId::name);
+            throw CastException(actual.getName() + messageTail);
         }
     }
 
