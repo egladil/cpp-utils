@@ -7,8 +7,6 @@
 #include <string_view>
 #include <vector>
 
-#include "parse_exception.h"
-
 struct JNIEnv_;
 struct _JNIEnv;
 struct _jmethodID;
@@ -37,9 +35,9 @@ class Class;
 
 template <typename T> class TypedArray;
 
-class JWrapException : public parse_exception {
+class JWrapException : public std::runtime_error {
   public:
-    using parse_exception::parse_exception;
+    using std::runtime_error::runtime_error;
 };
 
 class NullException : public JWrapException {
