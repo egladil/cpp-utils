@@ -8,6 +8,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include("cmake/catch2.cmake")
 
+add_subdirectory("src/hash")
 add_subdirectory("src/string")
 add_subdirectory("src/jwrap")
 
