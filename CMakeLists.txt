@@ -12,6 +12,7 @@ add_subdirectory("src/hash")
 add_subdirectory("src/string")
 add_subdirectory("src/jwrap")
 
+add_subdirectory("test/jwrap")
 add_subdirectory("test/string")
 
 putCatch2InFolder()
