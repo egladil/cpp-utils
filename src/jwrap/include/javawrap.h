@@ -676,7 +676,10 @@ template <typename ClassId> TypedObject<ClassId> java_cast(Object&& object) {
     return TypedObject<ClassId>(std::forward<Object>(object));
 }
 
-void init(JNIEnv* env);
+void createJavaVM(const std::vector<std::string>& args);
+void destroyJavaVM();
+
+void initThread(JNIEnv* env);
 JNIEnv* getEnv();
 
 } // namespace jwrap

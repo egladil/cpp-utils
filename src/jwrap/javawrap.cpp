@@ -1,5 +1,6 @@
 #include "javawrap.h"
 
+#include <mutex>
 #include <sstream>
 
 #include <jni.h>
@@ -750,14 +751,122 @@ template <> void throwReturn(const Throwable& throwable) {
     getEnv()->Throw(static_cast<jthrowable>(static_cast<jobject>(throwable)));
 }
 
-static JNIEnv* jniEnv = nullptr;
+namespace {
+static JavaVM* javaVM = nullptr;
+std::mutex javaVMLock;
 
-void init(JNIEnv* env) {
-    jniEnv = env;
+class JNIEnvironment {
+  private:
+    JNIEnv* jniEnv = nullptr;
+    bool autoDetach = true;
+
+  public:
+    constexpr JNIEnvironment() = default;
+    JNIEnvironment(const JNIEnvironment&) = delete;
+    JNIEnvironment(JNIEnvironment&&) = default;
+
+    JNIEnvironment(JNIEnv* jniEnv, bool autoDetach) : jniEnv(jniEnv), autoDetach(autoDetach) {}
+
+    ~JNIEnvironment() {
+        if (autoDetach && jniEnv != nullptr && javaVM != nullptr) {
+            javaVM->DetachCurrentThread();
+        }
+    }
+
+    JNIEnvironment& operator=(const JNIEnvironment&) = delete;
+    JNIEnvironment& operator=(JNIEnvironment&&) = default;
+
+    friend bool operator==(const JNIEnvironment& lhs, nullptr_t) { return lhs.jniEnv == nullptr; }
+    friend bool operator!=(const JNIEnvironment& lhs, nullptr_t) { return lhs.jniEnv != nullptr; }
+    friend bool operator==(nullptr_t, const JNIEnvironment& rhs) { return rhs.jniEnv == nullptr; }
+    friend bool operator!=(nullptr_t, const JNIEnvironment& rhs) { return rhs.jniEnv != nullptr; }
+
+    JNIEnv* operator*() const { return jniEnv; }
+    JNIEnv* operator->() const { return jniEnv; }
+
+    static JNIEnvironment attach() {
+        void* env = nullptr;
+        int32_t result = javaVM->AttachCurrentThread(&env, nullptr);
+        if (result != JNI_OK) {
+            throw jwrap::JWrapException("Could not attach thread.");
+        }
+
+        return JNIEnvironment(static_cast<JNIEnv*>(env), true);
+    }
+};
+
+static thread_local JNIEnvironment jniEnvironment;
+} // namespace
+
+extern "C" jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    auto lock = std::lock_guard(javaVMLock);
+
+    if (javaVM != nullptr) {
+        return 0;
+    }
+
+    javaVM = vm;
+    return JNI_VERSION_1_6;
+}
+
+void createJavaVM(const std::vector<std::string>& args) {
+    auto lock = std::lock_guard(javaVMLock);
+
+    if (javaVM != nullptr) {
+        throw jwrap::JWrapException("Java vm already created.");
+    }
+
+    std::vector<JavaVMOption> options;
+
+    options.reserve(args.size());
+    for (auto& arg : args) {
+        auto& option = options.emplace_back();
+        option.optionString = const_cast<char*>(arg.c_str());
+        option.extraInfo = nullptr;
+    }
+
+    JavaVMInitArgs vmArgs;
+    vmArgs.version = JNI_VERSION_1_6;
+    vmArgs.nOptions = options.size();
+    vmArgs.options = options.data();
+    vmArgs.ignoreUnrecognized = false;
+
+    void* env = nullptr;
+    int32_t result = JNI_CreateJavaVM(&javaVM, &env, &vmArgs);
+    if (result != JNI_OK) {
+        throw jwrap::JWrapException("Could not create java vm.");
+    }
+
+    initThread(static_cast<JNIEnv*>(env));
+}
+
+void destroyJavaVM() {
+    auto lock = std::lock_guard(javaVMLock);
+
+    if (javaVM == nullptr) {
+        return;
+    }
+
+    jniEnvironment = {};
+
+    int32_t result = javaVM->DestroyJavaVM();
+    if (result != JNI_OK) {
+        throw jwrap::JWrapException("Could not destroy java vm.");
+    }
+
+    javaVM = nullptr;
+}
+
+void initThread(JNIEnv* env) {
+    jniEnvironment = JNIEnvironment(env, false);
 }
 
 JNIEnv* getEnv() {
-    return jniEnv;
+    if (jniEnvironment == nullptr) {
+        jniEnvironment = JNIEnvironment::attach();
+    }
+
+    return *jniEnvironment;
 }
 
 } // namespace jwrap
