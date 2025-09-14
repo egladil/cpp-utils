@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.18)
 
 project(cpp_utils)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include(CMakeDependentOption)
 
 OPTION(CPPUTILS_HASH "Build hash library" ON)
+OPTION(CPPUTILS_MEMORY "Build memory library" ON)
 OPTION(CPPUTILS_STRING "Build string library" ON)
 CMAKE_DEPENDENT_OPTION(CPPUTILS_JWRAP "Build jwrap library" OFF "CPPUTILS_STRING" OFF)
 OPTION(CPPUTILS_ALL "Build all libraries" OFF)
@@ -16,12 +17,17 @@ OPTION(CPPUTILS_TESTS "Build unit tests" OFF)
 
 if(CPPUTILS_ALL)
 	set(CPPUTILS_HASH ON)
+	set(CPPUTILS_MEMORY ON)
 	set(CPPUTILS_STRING ON)
 	set(CPPUTILS_JWRAP ON)
 endif()
 
 if(CPPUTILS_TESTS)
 	include("cmake/catch2.cmake")
+endif()
+
+if(CPPUTILS_MEMORY)
+	add_subdirectory("src/memory")
 endif()
 
 if(CPPUTILS_HASH)
