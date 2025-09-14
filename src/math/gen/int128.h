@@ -1,0 +1,69 @@
+#pragma once
+
+#cmakedefine HAVE_CPPUTILS_INT128_STDINT
+#cmakedefine HAVE_CPPUTILS_INT128_BUILTIN_T
+#cmakedefine HAVE_CPPUTILS_INT128_BUILTIN
+#cmakedefine HAVE_CPPUTILS_BITINT128
+#cmakedefine HAVE_CPPUTILS_EXTINT128
+
+#cmakedefine HAVE_CPPUTILS_UINT128_STDINT
+#cmakedefine HAVE_CPPUTILS_UINT128_BUILTIN_T
+#cmakedefine HAVE_CPPUTILS_UINT128_BUILTIN
+#cmakedefine HAVE_CPPUTILS_BITUINT128
+#cmakedefine HAVE_CPPUTILS_EXTUINT128
+
+#cmakedefine CPPUTILS_MSVC_INT128
+
+#define CPPUTILS_INT128 1
+#define CPPUTILS_INT128_BUILTIN 1
+#if defined(HAVE_CPPUTILS_INT128_STDINT)
+#include <stdint.h>
+#elif defined(HAVE_CPPUTILS_INT128_BUILTIN_T)
+using int128_t = __int128_t;
+#elif defined(HAVE_CPPUTILS_INT128_BUILTIN)
+using int128_t = __int128;
+#elif defined(HAVE_CPPUTILS_BITINT128)
+using int128_t = _BitInt(128);
+#elif defined(HAVE_CPPUTILS_EXTINT128)
+using int128_t = _ExtInt(128);
+#elif defined(CPPUTILS_MSVC_INT128)
+#undef CPPUTILS_INT128_BUILTIN
+#include <__msvc_int128.hpp>
+using int128_t = std::_Signed128;
+#else
+#undef CPPUTILS_INT128
+#undef CPPUTILS_INT128_BUILTIN
+#endif
+
+#define CPPUTILS_UINT128 1
+#define CPPUTILS_UINT128_BUILTIN 1
+#if defined(HAVE_CPPUTILS_UINT128_STDINT)
+#include <stdint.h>
+#elif defined(HAVE_CPPUTILS_UINT128_BUILTIN_T)
+using uint128_t = __uint128_t;
+#elif defined(HAVE_CPPUTILS_UINT128_BUILTIN)
+using uint128_t = __uint128;
+#elif defined(HAVE_CPPUTILS_BITUINT128)
+using uint128_t = unsigned _BitInt(128);
+#elif defined(HAVE_CPPUTILS_EXTUINT128)
+using uint128_t = unsigned _ExtInt(128);
+#elif defined(CPPUTILS_MSVC_INT128)
+#undef CPPUTILS_UINT128_BUILTIN
+#include <__msvc_int128.hpp>
+using uint128_t = std::_Unsigned128;
+#else
+#undef CPPUTILS_UINT128
+#undef CPPUTILS_UINT128_BUILTIN
+#endif
+
+#undef HAVE_CPPUTILS_INT128_STDINT
+#undef HAVE_CPPUTILS_INT128_BUILTIN_T
+#undef HAVE_CPPUTILS_INT128_BUILTIN
+#undef HAVE_CPPUTILS_BITINT128
+#undef HAVE_CPPUTILS_EXTINT128
+
+#undef HAVE_CPPUTILS_UINT128_STDINT
+#undef HAVE_CPPUTILS_UINT128_BUILTIN_T
+#undef HAVE_CPPUTILS_UINT128_BUILTIN
+#undef HAVE_CPPUTILS_BITUINT128
+#undef HAVE_CPPUTILS_EXTUINT128
