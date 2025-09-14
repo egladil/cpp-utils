@@ -1,5 +1,6 @@
 
 set(HEADER_FILES
+    include/compressed_pair.h
     include/tagged_ptr.h
 )
 
